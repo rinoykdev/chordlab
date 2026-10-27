@@ -1,0 +1,6 @@
+node_modules
+dist
+*.log
+eval/real/*.wav
+eval/real/*.lab
+dist-single
