@@ -25,7 +25,7 @@ export async function decodeFeatures(
   tempo?: TempoEstimate,
 ): Promise<AnalysisResult> {
   const t0 = performance.now();
-  const vocab = buildVocabulary(options.vocabulary);
+  const vocab = buildVocabulary(options.vocabulary, recognizer.extraSuffixes);
   const scores = await recognizer.frameScores({ features, vocab });
   const path = viterbi(scores, features.nFrames, vocab.length, switchPenalty(options.smoothing));
   const { segments, uncertainShare } = segmentPath(path, scores, features, vocab, options);

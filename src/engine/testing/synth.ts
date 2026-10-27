@@ -26,11 +26,12 @@ export interface SynthOptions {
 }
 
 export function parseSpec(chord: string): { root: number; intervals: number[] } {
-  const m = /^([A-G]#?)(m7|maj7|7|m)?$/.exec(chord);
+  const m = /^([A-G]#?)(maj7|m7|sus2|sus4|add9|dim|7|m|5)?$/.exec(chord);
   if (!m) throw new Error(`bad chord ${chord}`);
   const root = NOTE.indexOf(m[1]);
   const q = m[2] ?? '';
-  const intervals = { '': [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 7, 10], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10] }[q]!;
+  const table: Record<string, number[]> = { '': [0, 4, 7], m: [0, 3, 7], '7': [0, 4, 7, 10], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10], sus2: [0, 2, 7], sus4: [0, 5, 7], add9: [0, 4, 7, 2], dim: [0, 3, 6], '5': [0, 7] };
+  const intervals = table[q];
   return { root, intervals };
 }
 

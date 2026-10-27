@@ -14,7 +14,11 @@ npm run eval:real -- eval/real   # score real recordings you supply (see eval/re
 ```
 
 Deploy `dist/` to any static host. It uses relative paths, so a sub-folder works too.
-Service workers need HTTPS (or `localhost`).
+Service workers need HTTPS (or `localhost`). Never publish the repository root itself: its `index.html`
+points at TypeScript source, which browsers can't run, so the page stays blank.
+
+**GitHub Pages:** `.github/workflows/deploy.yml` tests, builds and publishes `dist/` on every push to
+`main`. One-time setup: Settings → Pages → Build and deployment → Source → **GitHub Actions**.
 
 ## How it works
 
@@ -56,6 +60,18 @@ instead (the worker must answer a handshake before it receives audio). If blob m
 `<audio>` element can't play a file, playback switches to Web Audio, where changing speed also
 changes pitch. Both paths are tested under a strict content-security policy.
 
+**Teach Chordlab (learning from your guitar).** The graduation-cap icon opens a recording session:
+the app asks for one chord at a time, records about three seconds from the microphone (voice
+processing off), and checks each take against the requested chord using the theoretical templates,
+so a wrong chord is flagged ("That sounded more like Am than G") instead of polluting the training.
+Takes can also be imported from audio files. Each take becomes one root-relative chroma vector;
+averaging per chord type gives a template valid in all 12 keys, blended with theory by
+n / (n + 2) so a few takes nudge rather than override. Results are measured leave-one-out
+(each take judged by a profile built from the others) against the default engine. With the profile
+switched on, analysis uses the learned templates and can detect the chord types you taught
+(e.g. sus2, sus4, dim, add9, power chords). Code: `src/engine/learn.ts`, `src/state/teach.ts`,
+`src/audio/recorder.ts`, `src/components/Teach.tsx`. Takes are stored in IndexedDB (`takes`).
+
 **Instrument shapes** come from three tiers, in order: hand-checked open shapes (standard tuning),
 standard movable E-shape/A-shape barre chords, then a search over the fretboard that finds every
 playable shape (span of four frets or less, at most four fingers, root in the bass on guitar). The
@@ -72,6 +88,10 @@ case. With the beta sevenths vocabulary it reaches about 87% (Fmaj7 tends to rea
 detection is correct on all five test progressions. Tempo is within 3% across 66–174 BPM *up to a
 factor of two*: slow tempos can read as double, so the UI offers ×2 / ÷2. A 5-minute recording
 analyses in about 8 s in Node, and runs in a worker in the browser.
+
+**Learning (`tests/learn.test.ts`, 7 tests).** Wrong takes are flagged, a profile learned from G and A
+sus4 finds Dsus4 and Esus4 in an unseen song, and major/minor detection doesn't degrade.
+`tests/e2e/teach-flow.py` drives the full session in Chromium with a fake microphone (9 checks).
 
 **Mapping and editing (`tests/music.test.ts`, `tests/project.test.ts`).** Every curated shape plays
 exactly its chord. Every chord in every tuning gets a playable shape. Piano voicings contain the right

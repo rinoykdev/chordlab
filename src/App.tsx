@@ -5,6 +5,8 @@ import { ConfirmDialog, SelfTestModal, ShortcutsModal, Toasts } from './componen
 import { Preview } from './components/Preview';
 import { Sidebar } from './components/Sidebar';
 import { Timeline } from './components/Timeline';
+import { TeachModal } from './components/Teach';
+import { teach } from './state/teach';
 import { TopBar } from './components/TopBar';
 import { app, currentProject, importFiles, init, redo, select, splitAtPlayhead, undo, updateSegments, updateSettings, useApp } from './state/app';
 import { deleteSegment } from './state/project';
@@ -34,7 +36,7 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
-      if (el.closest('input, select, textarea, [contenteditable="true"]') || app.get().confirm) return;
+      if (el.closest('input, select, textarea, [contenteditable="true"]') || app.get().confirm || teach.get().open) return;
       const p = currentProject();
       const mod = e.metaKey || e.ctrlKey;
       const k = e.key;
@@ -89,6 +91,7 @@ export function App() {
       </div>
       <Toasts />
       <SelfTestModal />
+      <TeachModal />
       <ConfirmDialog />
       {shortcuts && <ShortcutsModal onClose={() => setShortcuts(false)} />}
       {dragging && <div className="drag-overlay">Drop audio to analyse it</div>}

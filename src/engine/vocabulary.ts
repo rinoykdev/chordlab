@@ -8,24 +8,31 @@ export interface VocabEntry {
   intervals: number[];
 }
 
-const QUALITIES: Record<Vocabulary, { suffix: string; intervals: number[] }[]> = {
-  majmin: [
-    { suffix: '', intervals: [0, 4, 7] },
-    { suffix: 'm', intervals: [0, 3, 7] },
-  ],
-  extended: [
-    { suffix: '', intervals: [0, 4, 7] },
-    { suffix: 'm', intervals: [0, 3, 7] },
-    { suffix: '7', intervals: [0, 4, 7, 10] },
-    { suffix: 'maj7', intervals: [0, 4, 7, 11] },
-    { suffix: 'm7', intervals: [0, 3, 7, 10] },
-  ],
+/** Every chord type the engine can represent. The first interval is the root. */
+export const QUALITY_INTERVALS: Record<string, number[]> = {
+  '': [0, 4, 7],
+  m: [0, 3, 7],
+  '7': [0, 4, 7, 10],
+  maj7: [0, 4, 7, 11],
+  m7: [0, 3, 7, 10],
+  sus2: [0, 2, 7],
+  sus4: [0, 5, 7],
+  dim: [0, 3, 6],
+  add9: [0, 4, 7, 2],
+  '5': [0, 7],
 };
 
-export function buildVocabulary(v: Vocabulary): VocabEntry[] {
+const BASE: Record<Vocabulary, string[]> = {
+  majmin: ['', 'm'],
+  extended: ['', 'm', '7', 'maj7', 'm7'],
+};
+
+/** Build the label set. `extra` adds chord types a learned profile has examples for. */
+export function buildVocabulary(v: Vocabulary, extra: string[] = []): VocabEntry[] {
+  const suffixes = [...new Set([...BASE[v], ...extra.filter((s) => s in QUALITY_INTERVALS)])];
   const out: VocabEntry[] = [{ label: 'N', root: -1, suffix: '', intervals: [] }];
-  for (const q of QUALITIES[v]) {
-    for (let r = 0; r < 12; r++) out.push({ label: PITCH_CLASSES[r] + q.suffix, root: r, suffix: q.suffix, intervals: q.intervals });
+  for (const suffix of suffixes) {
+    for (let r = 0; r < 12; r++) out.push({ label: PITCH_CLASSES[r] + suffix, root: r, suffix, intervals: QUALITY_INTERVALS[suffix] });
   }
   return out;
 }

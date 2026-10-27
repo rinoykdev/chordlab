@@ -11,6 +11,8 @@ export interface ChordRecognizer {
   readonly id: string;
   readonly label: string;
   readonly version: string;
+  /** Chord types beyond the chosen vocabulary that this recognizer can score (e.g. learned sus4). */
+  readonly extraSuffixes?: string[];
   frameScores(input: {
     features: Features;
     vocab: VocabEntry[];

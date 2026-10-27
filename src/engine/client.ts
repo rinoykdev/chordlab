@@ -1,4 +1,5 @@
 /** Main-thread facade over the analysis worker, with an in-thread fallback. */
+import type { LearnedProfile } from './learn';
 import type { AnalysisResult, DecodeOptions, Features, ProgressFn } from './types';
 import type { WorkerRequest, WorkerResponse } from './worker';
 
@@ -56,30 +57,30 @@ function getWorker(): Promise<Worker | null> {
 /** Yield to the event loop so the main-thread fallback can repaint between stages. */
 const yieldFrame = () => new Promise((r) => setTimeout(r, 0));
 
-export async function analyzeInBackground(samples: Float32Array, sampleRate: number, options: DecodeOptions, onProgress?: ProgressFn): Promise<{ result: AnalysisResult; features: Features }> {
+export async function analyzeInBackground(samples: Float32Array, sampleRate: number, options: DecodeOptions, onProgress?: ProgressFn, profile?: LearnedProfile): Promise<{ result: AnalysisResult; features: Features }> {
   const w = await getWorker();
   if (!w) {
     await yieldFrame();
-    const { analyzeAudio } = await import('./analyze');
-    return analyzeAudio(samples, sampleRate, options, onProgress);
+    const [{ analyzeAudio }, { createProfileRecognizer }, { templateRecognizer }] = await Promise.all([import('./analyze'), import('./learn'), import('./recognizers/template')]);
+    return analyzeAudio(samples, sampleRate, options, onProgress, profile?.templates.length ? createProfileRecognizer(profile) : templateRecognizer);
   }
   const id = nextId++;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve: (v) => resolve(v as { result: AnalysisResult; features: Features }), reject, onProgress });
-    w.postMessage({ type: 'analyze', id, samples, sampleRate, options } satisfies WorkerRequest, [samples.buffer]);
+    w.postMessage({ type: 'analyze', id, samples, sampleRate, options, profile } satisfies WorkerRequest, [samples.buffer]);
   });
 }
 
-export async function redecodeInBackground(features: Features, options: DecodeOptions): Promise<AnalysisResult> {
+export async function redecodeInBackground(features: Features, options: DecodeOptions, profile?: LearnedProfile): Promise<AnalysisResult> {
   const w = await getWorker();
   if (!w) {
-    const { decodeFeatures } = await import('./analyze');
-    return decodeFeatures(features, options);
+    const [{ decodeFeatures }, { createProfileRecognizer }, { templateRecognizer }] = await Promise.all([import('./analyze'), import('./learn'), import('./recognizers/template')]);
+    return decodeFeatures(features, options, profile?.templates.length ? createProfileRecognizer(profile) : templateRecognizer);
   }
   const id = nextId++;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve: (v) => resolve(v.result), reject });
-    w.postMessage({ type: 'decode', id, features, options } satisfies WorkerRequest);
+    w.postMessage({ type: 'decode', id, features, options, profile } satisfies WorkerRequest);
   });
 }
 

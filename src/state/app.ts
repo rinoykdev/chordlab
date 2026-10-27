@@ -6,6 +6,7 @@ import { DEFAULT_DECODE_OPTIONS, type DecodeOptions, type Segment } from '../eng
 import { bars, overlapAccuracy, synthesize, type SynthOptions } from '../engine/testing/synth';
 import { canonicalChord, keyPrefersFlats, transposeChord } from '../music/theory';
 import { db, requestPersistence } from './db';
+import { activeProfile, loadTakes } from './teach';
 import { DEFAULT_SETTINGS, newProjectId, splitAt, titleFromFile, type Project, type ProjectSettings } from './project';
 import { createStore, useStore } from './store';
 
@@ -117,6 +118,7 @@ function patchProject(id: string, patch: Partial<Project> | ((p: Project) => Par
 
 /* ---------- lifecycle ---------- */
 export async function init(): Promise<void> {
+  void loadTakes();
   try {
     const projects = (await db.listProjects()).sort((a, b) => b.updatedAt - a.updatedAt);
     app.set({ projects, loaded: true });
@@ -195,7 +197,7 @@ export async function runAnalysis(id: string, blob: Blob): Promise<void> {
     patchProject(id, { status: 'analysing', duration: decoded.duration, peaks: decoded.peaks });
     if (app.get().currentId === id && playback.get().duration === 0) playback.set({ duration: decoded.duration });
     const options = app.get().projects.find((p) => p.id === id)?.settings.decode ?? DEFAULT_DECODE_OPTIONS;
-    const { result, features } = await analyzeInBackground(decoded.samples, decoded.sampleRate, options, (stage, f) => setProgress(stage, 0.1 + f * 0.9));
+    const { result, features } = await analyzeInBackground(decoded.samples, decoded.sampleRate, options, (stage, f) => setProgress(stage, 0.1 + f * 0.9), activeProfile());
     await db.putFeatures(id, features).catch(() => undefined);
     patchProject(id, { status: 'ready', analysis: result, segments: result.segments, duration: result.duration });
     const p = app.get().projects.find((x) => x.id === id);
@@ -294,7 +296,7 @@ export async function reanalyse(options: DecodeOptions): Promise<void> {
   if (!features) { await retryAnalysis(p.id); return; }
   app.set((s) => ({ progress: { ...s.progress, [p.id]: { stage: 'Decoding chords', fraction: 0.5 } } }));
   try {
-    const result = await redecodeInBackground(features, options);
+    const result = await redecodeInBackground(features, options, activeProfile());
     app.set((s) => ({ past: [...s.past.slice(-99), p.segments], future: [] }));
     patchProject(p.id, { analysis: { ...result, tempo: p.analysis?.tempo ?? result.tempo }, segments: result.segments, settings: { ...p.settings, decode: options } });
     toast(`Re-analysed: ${result.segments.filter((s) => s.chord !== 'N').length} chord changes. Undo restores your previous chords.`, 'success');

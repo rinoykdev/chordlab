@@ -1,9 +1,10 @@
 /** IndexedDB persistence: projects, original audio blobs and cached analysis features. */
 import type { Features } from '../engine/types';
 import type { Project } from './project';
+import type { TeachTake } from './teach';
 
 const DB_NAME = 'chordlab';
-const VERSION = 1;
+const VERSION = 2;
 let dbPromise: Promise<IDBDatabase> | null = null;
 
 function open(): Promise<IDBDatabase> {
@@ -16,6 +17,7 @@ function open(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('audio')) db.createObjectStore('audio');
       if (!db.objectStoreNames.contains('features')) db.createObjectStore('features');
+      if (!db.objectStoreNames.contains('takes')) db.createObjectStore('takes', { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error('Could not open the local database.'));
@@ -43,6 +45,10 @@ export const db = {
   putAudio: (id: string, blob: Blob) => tx('audio', 'readwrite', (s) => s.put(blob, id)),
   getFeatures: (id: string) => tx<Features | undefined>('features', 'readonly', (s) => s.get(id)),
   putFeatures: (id: string, f: Features) => tx('features', 'readwrite', (s) => s.put(f, id)),
+  listTakes: () => tx<TeachTake[]>('takes', 'readonly', (s) => s.getAll() as IDBRequest<TeachTake[]>),
+  putTake: (t: TeachTake) => tx('takes', 'readwrite', (s) => s.put(t)),
+  deleteTake: (id: string) => tx('takes', 'readwrite', (s) => s.delete(id)),
+  clearTakes: () => tx('takes', 'readwrite', (s) => s.clear()),
   async deleteProject(id: string) {
     await tx('projects', 'readwrite', (s) => s.delete(id));
     await tx('audio', 'readwrite', (s) => s.delete(id));

@@ -6,6 +6,7 @@ import { suggestCapo, TUNINGS } from '../music/fretted';
 import { PIANO_VOICINGS, type PianoVoicingId } from '../music/piano';
 import { diatonicChords, EDITABLE_QUALITIES, keyName, noteName, parseChord, QUALITIES, transposeChord } from '../music/theory';
 import { askConfirm, reanalyse, select, splitAtPlayhead, toStoredChord, updateSegments, updateSettings, useApp, useCurrent } from '../state/app';
+import { openTeach, setProfileEnabled, useTeach } from '../state/teach';
 import { deleteSegment, editedCount, insertChordAt, mergeWithNext, renameSegment, setSegmentTimes, type Instrument, type Project } from '../state/project';
 import { confidenceColor, fmtTime, useDisplay } from './util';
 
@@ -201,7 +202,11 @@ function AnalysisSection({ p }: { p: Project }) {
   const [opts, setOpts] = useState<DecodeOptions>(p.settings.decode ?? DEFAULT_DECODE_OPTIONS);
   const busy = useApp((s) => !!s.progress[p.id]);
   const edits = editedCount(p.segments);
-  const dirty = JSON.stringify(opts) !== JSON.stringify(a.options);
+  const profile = useTeach((s) => s.profile);
+  const profileOn = useTeach((s) => s.enabled) && !!profile;
+  const usedProfile = a.engine.includes('profile');
+  const profileChanged = profileOn !== usedProfile;
+  const dirty = JSON.stringify(opts) !== JSON.stringify(a.options) || profileChanged;
   const apply = async () => {
     if (edits && !(await askConfirm({ title: 'Replace your edits?', message: `Re-analysing replaces your ${edits} manual edit${edits === 1 ? '' : 's'}. You can undo this afterwards.`, confirmLabel: 'Re-analyse' }))) return;
     void reanalyse(opts);
@@ -219,6 +224,12 @@ function AnalysisSection({ p }: { p: Project }) {
       <input id="smooth" className="range" type="range" min={0} max={1} step={0.05} value={opts.smoothing} onChange={(e) => setOpts({ ...opts, smoothing: Number(e.target.value) })} />
       <div className="row"><label htmlFor="minlen">Shortest chord</label><span className="tnum">{opts.minDuration.toFixed(1)} s</span></div>
       <input id="minlen" className="range" type="range" min={0.2} max={3} step={0.1} value={opts.minDuration} onChange={(e) => setOpts({ ...opts, minDuration: Number(e.target.value) })} />
+      <div className="row"><label htmlFor="gp">Guitar profile</label>
+        {profile
+          ? <button id="gp" role="switch" aria-checked={profileOn} className="toggle" onClick={() => setProfileEnabled(!profileOn)} />
+          : <button className="btn ghost sm" onClick={openTeach}>Teach Chordlab</button>}
+      </div>
+      {profileChanged && <p className="hint" style={{ margin: 0 }}>{profileOn ? 'Re-analyse to use your guitar profile on this song.' : 'This song was analysed with your guitar profile. Re-analyse to remove it.'}</p>}
       <button className="btn sm primary" disabled={!dirty || busy} onClick={() => void apply()}>{busy ? 'Re-analysing…' : 'Re-analyse with these settings'}</button>
       <dl className="kv">
         <dt>Engine</dt><dd>{a.engine} {a.engineVersion}</dd>

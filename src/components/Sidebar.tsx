@@ -1,4 +1,5 @@
-import { AlertTriangle, FlaskConical, FolderOpen, Keyboard, Library, Trash2, Upload, Wand2 } from 'lucide-react';
+import { AlertTriangle, FlaskConical, FolderOpen, GraduationCap, Keyboard, Library, Trash2, Upload, Wand2 } from 'lucide-react';
+import { openTeach } from '../state/teach';
 import { useEffect, useRef, useState } from 'react';
 import { UNCERTAIN_THRESHOLD } from '../engine/types';
 import { keyName } from '../music/theory';
@@ -23,6 +24,7 @@ export function Sidebar({ onShortcuts }: { onShortcuts: () => void }) {
         <button className="icon-btn on" aria-label="Library" title="Library"><Library size={16} /></button>
         <button className="icon-btn" aria-label="Import audio" title="Import audio" onClick={() => input.current?.click()}><FolderOpen size={16} /></button>
         <button className="icon-btn" aria-label="Create demo song" title="Create a demo song" onClick={() => void createDemo()}><Wand2 size={16} /></button>
+        <button className="icon-btn" aria-label="Teach Chordlab your guitar" title="Teach Chordlab your guitar" onClick={openTeach}><GraduationCap size={16} /></button>
         <button className="icon-btn" aria-label="Run engine self-test" title="Run the engine self-test" onClick={() => void runSelfTest()}><FlaskConical size={16} /></button>
         <span className="spacer" />
         <button className="icon-btn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={onShortcuts}><Keyboard size={16} /></button>
